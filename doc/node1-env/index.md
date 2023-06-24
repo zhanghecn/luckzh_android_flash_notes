@@ -246,8 +246,8 @@ sudo free -h
 内存：       10Gi       1.0Gi       7.9Gi        40Mi       1.4Gi       9.0Gi
 交换：         0B          0B          0B
 
-# 分配16G的文件
-sudo fallocate -l 16G /swapfile
+# 分配32G的文件
+sudo fallocate -l 32G /swapfile
 
 # 设置权限
 sudo chmod 600 /swapfile
@@ -268,7 +268,7 @@ sudo free -h
 
 # 我们得让它在 系统重启后自动挂载分区
 # 修改 /etc/fstab 进行配置
-vim /etc/fastab
+vim /etc/fstab
 # 后面追加 /swapfile swap swap defaults 0 0
 # 如果已经有了就算了
 ```
@@ -317,7 +317,7 @@ eng	        具有额外调试工具的开发配置
 
 如果你是 ``pixel4a`` 你应该执行下面的命令
 ```
-lunch aosp_sunfish-user
+lunch aosp_sunfish-userdebug
 ```
 
 ### 开始构建
@@ -331,3 +331,10 @@ m
 
 接下来就是漫长的等待。
 
+经过了几个小时,其中出现了**内存溢出**。
+将内存在多设置一下,重新 ``m``继续构建即可成功。
+
+构建完的目录位置: ``out/target/product/sunfish/vbmeta.img``
+
+
+![Alt text](image07.png)
