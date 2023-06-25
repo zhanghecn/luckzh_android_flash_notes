@@ -176,7 +176,7 @@ git branch -a|grep "android-13"
 关于分支标记可以查看**google**的 **源代码标记和 build** :
 **https://source.android.google.cn/docs/setup/about/build-numbers?hl=zh-cn#source-code-tags-and-builds**
 
-我选的是,因为这符合我的主题 **pixel4a** 并且是 **android-13**
+我选的是``android-13.0.0_r40``,因为这符合我的主题 **pixel4a** 并且是 **android-13**
 ```
 TQ2A.230405.003.B2	android-13.0.0_r40	Android13	Pixel 4a、Pixel 4a (5G)、Pixel 5、Pixel 5a	2023-04-05
 ```
@@ -317,9 +317,9 @@ eng	        具有额外调试工具的开发配置
 
 如果你是 ``pixel4a`` 你应该执行下面的命令
 ```
-lunch aosp_sunfish-userdebug
+lunch aosp_sunfish-user
 ```
-
+当然您也可以直接运行 ``lunch``不过好像没有``user``类型只有``userdebug``
 ### 开始构建
 
 使用 m 构建所有内容。m 可以使用 -jN 参数处理并行任务。如果您没有提供 -j 参数，构建系统会自动选择您认为最适合您系统的并行任务计数。
@@ -334,7 +334,15 @@ m
 经过了几个小时,其中出现了**内存溢出**。
 将内存在多设置一下,重新 ``m``继续构建即可成功。
 
+
 构建完的目录位置: ``out/target/product/sunfish/vbmeta.img``
 
 
 ![Alt text](image07.png)
+#### 后续问题
+一般来说修改代码后重新构建会很快。
+如果你想重新构建使用 ``make clean`` 清除一下之前的记录
+
+如果终端闪退 或者 还是内存溢出 建议 ``m -j1``只使用1个内核。可以减少内存使用。
+因为他默认好像按照你的内存容量计算内核数来的,这样每个线程占用的内存一起特别高
+

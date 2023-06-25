@@ -2,7 +2,7 @@
 
 刷写设备需要用到 ``fastboot`` 以及 ``adb``
 
-你可以通过 **ubuntu software** 进行安装 **android studio** 里面自带了 **adb fastboot**
+你可以通过 **ubuntu software** 进行安装 **android studio** 里面自带了 **adb和fastboot**
 也可以通过 aosp 源码中 构建 **adb和fastboot**
 
 要从源码中构建 **adb和fastboot**输入下面的命令进行构建
@@ -93,9 +93,47 @@ fastboot flashall -w
 
 -w 选项会擦除设备上的 /data 分区；该选项在您第一次刷写特定设备时非常有用，但在其他情况下则没必要使用。
 
-#### 关于问题
-1.刷入之后卡在 fastboot mode 界面
-这其实是我的问题,我发现他默认给我刷到 b slot(槽)了 ,结果它启动的时候不知道引导哪个槽
+### 重点来拉!!
+你会发现你如何就卡不了机,卡在了 ``fastboot``界面。那么恭喜你成功踩坑。
+为什么呢？因为它要驱动。可笑的是官网一点都没有提到,还是通过官方出厂刷写工具刷回来的。
+``https://developers.google.com/android/images?hl=zh-cn``
+而官方刷机工具中比我们多了
+```
+fastboot flash bootloader bootloader-sunfish-s5-0.5-9825683.img
+fastboot flash radio radio-sunfish-g7150-00112-230505-b-10075601.img
+vendor.img
+```
+所以针对这种情况我想到两种方案
+1. 将我们的 ``boot.img system.img product.img ...``等等覆盖官方刷机包,在进行刷入
+2. 下载驱动二进制文件 重新编译
+
+我就选择第二种方案
+```
+1.下载驱动的两个文件
+注意区分下设备
+https://developers.google.com/android/drivers?hl=zh-cn
+
+2.解压在aosp 根目录下,会有两个文件
+extract-google_devices-sunfish.sh
+extract-qcom-sunfish.sh
+
+3.运行它们 后你就可以在 vendor/google_devices/sunfish/proprietary 下看到
+bootloader.img
+radio.img
+vendor.img
+
+4. 重新编译
+source build/envsetup.sh
+lunch aosp_sunfish-user
+m -j1
+```
+
+如果您编译失败,那么您需要执行``make clean`` 清理下``out`` 中的缓存.
+但是你就会变成全量编译,又得等几个小时了
+
+
+## 其他问题
+默认会给您刷到未激活的slot 比如 b slot(槽) ,如果它启动的时候不知道引导哪个槽
 参考解决: ``https://developers.google.com/android/images?hl=zh-cn``
 ```
     fastboot set_active b
