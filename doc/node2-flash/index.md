@@ -213,13 +213,16 @@ adb push boot.img /sdcard/
 
 接下来看图修补 **boot.img** 并重新刷入
 
-1. 点击安装
+1.点击安装
+   
 ![Alt text](image01.png)
 
-2. 选择修补的文件
+2.选择修补的文件
+
 ![Alt text](image02.png)
 
-3. 记录修补后的位置,然后 ``adb pull``出来重新刷
+3.记录修补后的位置,然后 ``adb pull``出来重新刷
+
 ![Alt text](image03.png)
 
 ```
@@ -241,5 +244,5 @@ fastboot reboot
 adb shell su
 ```
 
-到这里就结束了。
+到这里本章节也就结束了
 
