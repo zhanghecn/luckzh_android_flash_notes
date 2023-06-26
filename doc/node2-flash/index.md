@@ -103,7 +103,8 @@ fastboot flash bootloader bootloader-sunfish-s5-0.5-9825683.img
 fastboot flash radio radio-sunfish-g7150-00112-230505-b-10075601.img
 vendor.img
 ```
-所以针对这种情况我想到两种方案
+参考``debug_cat``的文章``http://www.debuglive.cn/article/1044719292299345920``
+所以我想到两种方案
 1. 将我们的 ``boot.img system.img product.img ...``等等覆盖官方刷机包,在进行刷入
 2. 下载驱动二进制文件 重新编译
 
