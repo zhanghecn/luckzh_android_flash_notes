@@ -76,7 +76,7 @@ fastboot flash boot boot.img
 fastboot reboot
 ```
 
-### 出现的问题
+### 内核模块
 
 刷入后并没有成功开机,卡在了启动界面
 
@@ -105,12 +105,16 @@ fastboot reboot
 
 所以我们得直接通过 ``adb``将 .ko 的内核模块全部 ``push`` 到 `` /vendor/lib/modules``中
 ```
-# 重新以 可读可写的 形式挂载分区 -R 会调用 reboot 重启
 # 禁用 dm-verity
+adb root
 adb disable-verity
-adb remount -R 
+adb reboot
+# 重新以 可读可写的 形式挂载分区 -R 会调用 reboot 重启
+adb root
+adb remount -R
 # push 到 vendor 分区对应的 内核模块的目录
-adb push ~/aosp/android-kernel/out/android-msm-pixel-4.14/dist/*.ko /vendor/lib/modules
+cd ~/aosp/android-kernel/out/android-msm-pixel-4.14/dist/
+adb push *.ko /vendor/lib/modules
 ```
 
 如果lunch 选择的构建类型不是 userdebug 而是 user
@@ -141,23 +145,25 @@ m -j1
 
 !!!!如果出现闪退或者报错,使用 make clean 后在重新构建
 ```
+接下来重复之前的操作即可
 
+### 确认内核版本
 
-
-
-如果你卡在 ``fastboot`` 进不了 ``adb`` 记得用之前的 ``boot.img`` 还原进去在执行
-
-刷进去后 通过下面命令查看内核版本
+刷进去后 通过下面命令查看当前内核版本
 ```
 adb shell
 cat /proc/version
+Linux version 4.14.295 (xxx@xxxx-virtual-machine) (Android (7284624, based on r416183b) clang version 12.0.5 (https://android.googlesource.com/toolchain/llvm-project c935d99d7cf2016289302412d708641d52d2f7ee), LLD 12.0.5 (/buildbot/src/android/llvm-toolchain/out/llvm-project/lld c935d99d7cf2016289302412d708641d52d2f7ee)) #1 repo:android-msm-sunfish-4.14-android13-qpr2 SMP PREEMPT Mon 
 ```
+查看编译的``Image.lz4-dtb``内核启动文件
+```
+grep -a 'Linux version' Image.lz4-dtb
 
+"initcall_debugLinux version 4.14.295 
+```
+![Alt text](image01.png)
 
-如果你之前修补刷入的``magisk``的``boot``失效,那么你得重新修补你之后编译内核的 ``boot`` 
+内核版本算对应上了。。。
+哎不容易呀,真 浪费时间,编译了好几次 ``aosp``。每天就那样干等着
 
-## kernelSu
-
-你可以参考 ``debug选手``大佬的 ``Pixel3编译的Kernel SU 内核``。
-地址来源: ``http://www.debuglive.cn/article/1091666763961073664``
 
