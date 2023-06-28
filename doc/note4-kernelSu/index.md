@@ -112,8 +112,8 @@ modules.load 文件，用于指示要在第一阶段 init 期间加载的模块
 ```
 # 进入到 内核根目录
 cd  ~/android-kernel/private/msm-google
-# 运行脚本 下载 kernelSu 稳定版分支代码
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+# 运行脚本  克隆 kernelSu main 分支代码 并处理
+curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 ```
 
 随后运行 ``build/build.sh`` 进行编译
@@ -122,7 +122,7 @@ curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh
 ```
 ....
 --- private/msm-google/arch/arm64/configs/sunfish_defconfig	2023-06-27 15:56:28.068070234 +0800
-+++ /home/zhangxuan/aosp/android-kernel/out/android-msm-pixel-4.14/private/msm-google/defconfig	2023-06-27 22:37:59.857566122 +0800
++++ ~/aosp/android-kernel/out/android-msm-pixel-4.14/private/msm-google/defconfig	2023-06-27 22:37:59.857566122 +0800
 @@ -685,7 +685,6 @@
  CONFIG_QUOTA_NETLINK_INTERFACE=y
  CONFIG_QFMT_V2=y
@@ -142,23 +142,217 @@ ERROR: savedefconfig does not match private/msm-google/arch/arm64/configs/sunfis
 大致意思是说 ``sunfish_defconfig`` 与 ``savedefconfig``的输出产物 ``out/android-msm-pixel-4.14/private/msm-google/defconfig``内容不匹配
 
 这是什么意思呢？
-这个我们得了解下配置文件
+哈哈哈，不懂呀不懂呀。
+百度根本没有答案。
 
-### 构建的配置文件
 
+只能勉强说下我这几天看的资料
+参考: ``https://blog.csdn.net/u011570492/article/details/55803327``
 
+大致能理解的是有几个配置文件分别是
+```
+Kconfig
+xxx_defconfig
+.config
+```
+
+### Kconfig
+Kconfig 在每个目录下都有,就比如你进入``kernelsu`` 就会发现这个 Kconfig文件
+```
+cd private/msm-google/drivers/kernelsu
+ls |grep config
+Kconfig
+```
+
+这有什么用呢？
+按照查到的资料来说
+Kconfig 可以参与到 menuconfig 的配置。这样我们可以很容易配置每个内核模块的选项。
+最终会生成 ``.config``文件,随后 ``makefile``  会根据这个 ``.config``生成带宏定义信息的头部文件参与编译
+
+我们可以在 内核源码根目录运行 ``make menuconfig`` 
+你会看到这种界面
+
+![Alt text](image04.png)
+
+然后输入 ``/`` 进入搜索界面，输入 ``ksu`` 也就是 ``KernelSu`` 中的 ``Kconfig``配置
+```
+menu "KernelSU"
+
+config KSU
+	tristate "KernelSU function support"
+	select OVERLAY_FS
+	default y
+	help
+	Enable kernel-level root privileges on Android System.
+
+config KSU_DEBUG
+	bool "KernelSU debug mode"
+	depends on KSU
+	default n
+	help
+	Enable KernelSU debug mode
+
+endmenu
+```
+
+你会看到这个界面
+
+![Alt text](image05.png)
 
 ```
-rm -rf !(".repo")
-repo sync
+可以看道它位于 配置项
+
+│   Location:                                                             │  
+  │     -> Device Drivers                                                   │  
+  │ (1)   -> KernelSU  
+
+配置路径为 drivers/kernelsu/Kconfig:3  
 ```
 
+
+我们跟到这个地方去
+
+![Alt text](image06.png)
+
+你就可以看到 ``tristate "KernelSU function support"``选项
+
+![Alt text](image07.png)
+
+它对应着 ``KernelSu Kconfig`` 的
+
 ```
-adb root
-adb shell cat /proc/kallsyms | grep kprobe
-0000000000000000 t kprobe_prog_func_proto
-0000000000000000 t kprobe_prog_is_valid_access
-0000000000000000 T __kprobes_text_end
-0000000000000000 T __kprobes_text_start
-0000000000000000 R kprobe_prog_ops
+config KSU
+	tristate "KernelSU function support"
+    ....
+```    
 ```
+`tristate` 是一个配置选项的类型，它表示可以有三个可能的值：`y`（yes）、`n`（no）和 `m`（module）。
+
+在这个特定的配置选项中，`tristate "KernelSU function support"` 表示一个带有三个可能状态的选项，用于确定是否支持 "KernelSU" 功能。具体含义如下：
+
+- `y`（yes）：选择此选项表示启用 "KernelSU" 功能，并将其编译到内核中。
+- `n`（no）：选择此选项表示禁用 "KernelSU" 功能，并不将其编译到内核中。
+- `m`（module）：选择此选项表示将 "KernelSU" 功能编译为内核模块，可以在运行时加载和卸载。使用模块的方式可以在不重新编译整个内核的情况下启用或禁用 "KernelSU"。
+
+因此，通过选择适当的值（`y`、`n` 或 `m`），可以决定是否启用 "KernelSU" 功能，并确定它是作为内核的一部分编译还是作为可加载的内核模块进行处理。
+```
+
+注意
+```
+menu "KernelSU"
+
+config KSU
+	tristate "KernelSU function support"
+	select OVERLAY_FS
+	default y
+	help
+	Enable kernel-level root privileges on Android System.
+```
+中的     
+```
+select OVERLAY_FS
+```
+
+在回顾之前的错误
+```
+--- private/msm-google/arch/arm64/configs/sunfish_defconfig	2023-06-27 15:56:28.068070234 +0800
++++ ~/aosp/android-kernel/out/android-msm-pixel-4.14/private/msm-google/defconfig	2023-06-27 22:37:59.857566122 +0800
+@@ -685,7 +685,6 @@
+ CONFIG_QUOTA_NETLINK_INTERFACE=y
+ CONFIG_QFMT_V2=y
+ CONFIG_FUSE_FS=y
+-CONFIG_OVERLAY_FS=y
+ CONFIG_INCREMENTAL_FS=m
+ CONFIG_VFAT_FS=y
+ CONFIG_TMPFS_POSIX_ACL=y
+++ RES=1
+++ '[' 1 -ne 0 ']'
+++ echo ERROR: savedefconfig does not match private/msm-google/arch/arm64/configs/sunfish_defconfig
+ERROR: savedefconfig does not match private/msm-google/arch/arm64/configs/sunfish_defconfig
+++ return 1
+```
+
+通过 ``savedefconfig`` 生成的 ``defconfig`` 与 ``sunfish_defconfig`` 比对结果差异就在 ``-CONFIG_OVERLAY_FS=y``
+
+所以我把 ``select OVERLAY_FS``注释掉后就成功编译了,如下:
+```
+menu "KernelSU"
+
+config KSU
+	tristate "KernelSU function support"
+#	select OVERLAY_FS
+	default y
+	help
+	Enable kernel-level root privileges on Android System.
+```
+
+原理我并不知道为什么,之后会不会有问题,不过还是先了解下 ``defconfig`` 
+
+### defconfig
+
+defconfig 按照解释是说 每个 架构设备 的 默认建议配置
+
+一般是在 ``arch/xxx/configs``下
+那么 ``arm64`` 我们查看一下:
+
+![Alt text](image08.png)
+
+发现我们编译使用到的 ``sunfish_defconfig``,搜索的话也确实找到了 ``CONFIG_OVERLAY_FS=y``
+
+![Alt text](image09.png)
+
+那么也就是说之前报错 ``saveconfig`` 出的 ``defconfig`` 与 ``sunfish_defconfig`` 缺少的项就是这个了。
+
+但是注释掉 ``kernelSu Kconfig`` 中的 ``select OVERLAY_FS`` 后 编译就不缺少了。
+
+> 这是为什么呢？
+这是为什么呢？
+这是为什么呢？
+这是为什么呢？
+这是为什么呢？
+
+
+## 刷入KernelSu 内核
+
+编译后搜索一下 
+
+![Alt text](image10.png)
+
+发现存在 ``kernelSu`` 模块,不是说 ``tristate``类型是编译到内核里吗？ 百思不得其解呀~
+```
+config KSU
+	tristate "KernelSU function support"
+#	select OVERLAY_FS
+	default y
+	help
+	Enable kernel-level root privileges on Android System.
+```    
+
+算了司马当活马医。 直接刷入看看
+
+### 测试内核
+
+``kernelSu``本身是使用``kprobe`` hook 系统内核实现的功能,所以按道理我们不需要做其他更改了,直接测试就行了
+当然我不敢保证,毕竟有的内核版本 连 ``kprobe``都无法支持,我也对内核理解不多。
+
+我们可以直接通过 fastboot 刷入内核启动文件``Image.lz4-dtb`` 进行测试内核
+
+```
+adb reboot bootloader
+fastboot boot Image.lz4-dtb
+```
+
+然后打开 ``kernelSu`` 的 app 进行查看
+
+![Alt text](image12.png)
+
+
+### 集成到 boot.img
+重新编译 ``aosp``过于麻烦,所以我们使用 ``aik`` 也就是 ``android image kitchen``
+
+网站介绍: ``https://forum.xda-developers.com/t/tool-android-image-kitchen-unpack-repack-kernel-ramdisk-win-android-linux-mac.2073775/``
+
+注意下载:``AIK-Linux-v3.8-ALL.tar.gz`` 。当然它也有github ``https://github.com/osm0sis/Android-Image-Kitchen``
+你可以下载它的 ``linux`` 分支 或者 ``windows``
+
+下载完后解压你会发现有几个重要的脚本
