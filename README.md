@@ -11,8 +11,8 @@
 
 ## 目标
 大致笔记过程就下面
-1. [android-pixel4a-刷机系列-(1)Aosp下载编译](./doc/node1-env/index.md)
-2. [android-pixel4a-刷机系列-(2)结合magisk进行刷机](./doc/node2-flash/index.md)
-3. [android-pixel4a-刷机系列-(3)内核下载并编译](./doc/node3-kernel/index.md)
-4. [android-pixel4a-刷机系列-(4)kernelsu整合内核](./doc/node4-kernelSu/index.md)
+1. [android-pixel4a-刷机系列-(1)Aosp下载编译](./doc/note1-env/index.md)
+2. [android-pixel4a-刷机系列-(2)结合magisk进行刷机](./doc/note2-flash/index.md)
+3. [android-pixel4a-刷机系列-(3)内核下载并编译](./doc/note3-kernel/index.md)
+4. [android-pixel4a-刷机系列-(4)kernelsu整合内核](./doc/note4-kernelSu/index.md)
 5. [android-pixel4a-刷机系列-(5)kernelsu编译问题解决及使用](./doc/note5-kernelSu_question/index.md)
