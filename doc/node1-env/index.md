@@ -1,4 +1,4 @@
-# Aosp编译
+# (1)Aosp编译
 
 在此之前,建议您先了解下环境要求 
 - **https://source.android.com/docs/setup/start/requirements?hl=zh-cn**
@@ -8,6 +8,7 @@
 - 至少需要 16 GB 的可用内存，但 Google 建议提供 64 GB 
 - 建议Ubuntu 系统
 
+您也参考``debug_cat``大佬的 ``pixel6 刷入aosp`` : **http://www.debuglive.cn/article/1112435217932484608**
 
 ## 准备 ubuntu
 建议通过国内镜像站下载。

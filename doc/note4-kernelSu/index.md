@@ -1,4 +1,4 @@
-# kernelSu 内核编译及刷入
+# (4)kernelSu 内核编译及刷入
 
 你可以参考 ``debug选手``大佬的 ``Pixel3编译的Kernel SU 内核``。
 地址来源: ``http://www.debuglive.cn/article/1091666763961073664``
@@ -356,3 +356,30 @@ fastboot boot Image.lz4-dtb
 你可以下载它的 ``linux`` 分支 或者 ``windows``
 
 下载完后解压你会发现有几个重要的脚本
+
+```
+# 清理解包数据
+cleanup.sh
+# 重打包
+repackimg.sh
+# 解包
+unpackimg.sh
+```
+
+将 ``boot.img`` 放入到 ``aik``目录中,直接运行 ``unpacking.sh``
+你会看到多出2个文件夹
+
+![Alt text](image13.png)
+
+主要注意 ``split_img`` 目录,将里面的 ``boot.img-kernel`` 替换成你的启动内核``Image.lz4-dtb``注意替换的时候名字要改成一样
+
+![Alt text](image14.png)
+
+接下来直接调用 ``repackimg.sh`` 它会重打包成 ``image-new.img``
+
+接下来执行下面的命令进行刷入
+```
+adb reboot bootloader
+fastboot flash boot image-new.img``
+```
+
