@@ -1,4 +1,4 @@
-# (3)编译内核
+# android-pixel4a-刷机系列-(3)内核下载并编译
 
 参考来源: ``https://source.android.google.cn/docs/setup/build/building-kernels?hl=zh-cn``
 aosp 源码中的内核是已经编译好的二进制的。

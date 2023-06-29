@@ -1,4 +1,4 @@
-# (2)刷机
+# android-pixel4a-刷机系列-(2)结合magisk进行刷机
 
 刷写设备需要用到 ``fastboot`` 以及 ``adb``
 

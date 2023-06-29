@@ -1,4 +1,4 @@
-# (4)kernelSu 内核编译及刷入
+# android-pixel4a-刷机系列-(4)kernelsu整合内核
 
 你可以参考 ``debug选手``大佬的 ``Pixel3编译的Kernel SU 内核``。
 地址来源: ``http://www.debuglive.cn/article/1091666763961073664``
