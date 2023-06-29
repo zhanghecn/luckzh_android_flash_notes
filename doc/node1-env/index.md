@@ -1,4 +1,4 @@
-# (1)Aosp编译
+# android-pixel4a-刷机系列-(1)Aosp下载编译
 
 在此之前,建议您先了解下环境要求 
 - **https://source.android.com/docs/setup/start/requirements?hl=zh-cn**
@@ -151,7 +151,7 @@ tar -xvf aosp-latest.tar
 解压好后我们设置下同步来源为 **ustc** 镜像站
 将 ``.repo/manifests.git/config`` 中的
 ``url = https://android.googlesource.com/platform/manifest`` 替换成 ``url = git://mirrors.ustc.edu.cn/aosp/platform/manifest``
-【你可以通过vscode ``code .repo/manifests.git``打开这个目录,修改更加方便】
+
 本地版本库和远程仓库同步并检出使用下面的命令
 ```
   git config --global user.email "you@example.com"
