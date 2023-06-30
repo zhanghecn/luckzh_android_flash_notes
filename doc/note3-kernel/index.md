@@ -1,7 +1,7 @@
 # android-pixel4a-刷机系列-(3)内核下载并编译
 
 参考来源: ``https://source.android.google.cn/docs/setup/build/building-kernels?hl=zh-cn``
-aosp 源码中的内核是已经编译好的二进制的。
+aosp 源码中的内核是已经编译好
 
 而当要修改内核的时候,就得对源码下手了,所以我们得从源码编译内核。
 
@@ -49,7 +49,7 @@ sudo apt install libssl-dev
 
 ### 参与 aosp 构建
 
-由于内核最终会构建在 ``boot.img``里,所以我们只需要运行``make bootimage`` 然后再构建 ``boot`` 分区的时候指定下我们的内核二进制的位置。 通常这个文件是 ``Image.lz4-dtb``
+由于内核最终会构建在 ``boot.img``里,所以我们只需要运行``make bootimage`` 然后再构建 ``boot`` 分区的时候指定下我们构建内核的位置。 通常这个文件是 ``Image.lz4-dtb``
 
 ```
 cd aosp
@@ -109,19 +109,22 @@ fastboot reboot
 adb root
 adb disable-verity
 adb reboot
-# 重新以 可读可写的 形式挂载分区 -R 会调用 reboot 重启
+# 重新以 可读可写的 形式挂载分区
 adb root
-adb remount -R
+adb remount 
 # push 到 vendor 分区对应的 内核模块的目录
 cd ~/aosp/android-kernel/out/android-msm-pixel-4.14/dist/
 adb push *.ko /vendor/lib/modules
 ```
 
 如果lunch 选择的构建类型不是 userdebug 而是 user
-那么恭喜您,又成功踩坑了,  ``adb remount`` 只有在 **userdebug** 下才能运行 。这样您才可以重新挂载成可写入的分区。
-才能刷进去 **.ko** 内核模块。
+那么恭喜您,又成功踩坑了,  ``adb remount`` 只有在 **userdebug** 下才能运行 。这样您才可以使用 ``overlayfs``重新挂载成可写入的分区。
 
-**(原谅我并不是一个好人,我踩过的坑你们也别想跑,老老实实重新构建吧)**
+参考文档: [https://android.googlesource.com/platform/system/core/+/a9a3b73163fda5abf237cc0f0cee97ff33e6254d/fs_mgr/README.overlayfs.md](https://android.googlesource.com/platform/system/core/+/a9a3b73163fda5abf237cc0f0cee97ff33e6254d/fs_mgr/README.overlayfs.md)
+
+因为本身 ``vendor``分区是不可写的,想刷入 **.ko** 内核模块,必须用 ``remount`` 挂载成可写的
+
+**(原谅我并不是一个好人)**
 ```
 source build/envsetup.sh
 
@@ -131,15 +134,15 @@ lunch 37
 
     Lunch menu .. Here are the common combinations:
         ....
-        33. aosp_redfin-userdebug
-        34. aosp_redfin_car-userdebug
-        35. aosp_redfin_vf-userdebug
-        36. aosp_slider-userdebug
-        37. aosp_sunfish-userdebug
-        38. aosp_sunfish_car-userdebug
-        39. aosp_trout_arm64-userdebug
-        40. aosp_trout_x86-userdebug
-        41. aosp_whitefin-userdebug
+        1.  aosp_redfin-userdebug
+        2.  aosp_redfin_car-userdebug
+        3.  aosp_redfin_vf-userdebug
+        4.  aosp_slider-userdebug
+        5.  aosp_sunfish-userdebug
+        6.  aosp_sunfish_car-userdebug
+        7.  aosp_trout_arm64-userdebug
+        8.  aosp_trout_x86-userdebug
+        9.  aosp_whitefin-userdebug
 
 m -j1
 

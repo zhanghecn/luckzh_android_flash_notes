@@ -383,3 +383,63 @@ adb reboot bootloader
 fastboot flash boot image-new.img``
 ```
 
+## kernelsu测试
+
+刷入后你会发现用不了
+
+![Alt text](image15.png)
+
+如何排查呢？
+
+
+要排查问题肯定离不开日志,在 ``kernelSu``的源码中
+
+![Alt text](image16.png)
+
+几乎每个地方都有日志的输出
+
+日志使用的是 **内核中的printk**
+
+![Alt text](image17.png)
+
+根据网上查的资料来说: [https://www.cnblogs.com/ArsenalfanInECNU/p/16952781.html](https://www.cnblogs.com/ArsenalfanInECNU/p/16952781.html)
+
+可以使用 
+```
+# 从kernel的ring buffer(环缓冲区)中读取信息
+dmesg 
+dmesg -w # 实时获取日志
+dmesg -C # 清楚 ringbuf
+
+# /proc/kmsg是专门输出内核信息的地方,为了能够方便的在 user space 读取 Kernel log，Kernel driver 里面将ring buffer映射到了 /proc 目录下的文件节点 /proc/kmsg。所以读取 /proc/kmsg 文件其实就是在访问 Kernel Log 的循环缓冲区。虽然 Log buffe的大小是固定的，但是可以通过不断的访问 /proc/kmsg 将所有的log都备份下来。
+
+#实时显示内核打印信息并保存到android_kmsg.log文件中
+adb shell cat /proc/kmsg |tee android_kmsg.log
+```
+
+所有按照 ``klog.h`` 覆盖的宏定义
+
+![Alt text](image18.png)
+
+我们可以直接搜索 ``KernelSu``,使用命令``dmesg -w|grep KernelSU``进行实时跟踪
+
+```
+# dmesg -w|grep KernelSU              
+
+[  749.835666] KernelSU: save allow list, name: bin.mt.plus uid :10107, allow: 1
+
+[ 1311.425279] KernelSU: save allow list, name: bin.mt.plus uid :10107, allow: 0
+[ 1312.981342] KernelSU: save allow list, name: bin.mt.plus uid :10107, allow: 1
+[ 1313.578734] KernelSU: save allow list, name: bin.mt.plus uid :10107, allow: 0
+[ 1314.041084] KernelSU: save allow list, name: bin.mt.plus uid :10107, allow: 1
+[ 1376.168834] KernelSU: do_execveat_common su found
+[ 1376.168876] KernelSU: error: 0, sid: 833
+[ 1376.188984] KernelSU: do_execveat_common su found
+[ 1376.189022] KernelSU: error: 0, sid: 833
+[ 1417.165194] KernelSU: newfstatat su->sh!
+[ 1417.165234] KernelSU: faccessat su->sh!
+[ 1417.165927] KernelSU: do_execveat_common su found
+[ 1417.165968] KernelSU: error: 0, sid: 833
+```
+
+当然我这里的日志是通过的,下一节就说怎么修复。

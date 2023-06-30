@@ -245,5 +245,5 @@ fastboot reboot
 adb shell su
 ```
 
-到这里本章节也就结束了
+后续讲解内核编译
 

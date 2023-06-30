@@ -1,6 +1,6 @@
 # android-pixel4a-刷机系列-(5)kernelsu编译问题解决及使用
 
-可能你也尝试编译了kernelSu 并成功刷入,但是发现使用并没有效果,接下来我们逐步排查进行修复。
+上一节编译的``kernelSu``有点问题,本次就进行修复重新编译
 
 ## 重编译
 
@@ -162,5 +162,67 @@ cd private/msm-google
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 ```
 
+然后按照之前的配置重新配一遍安装即可
+
 ## kernelsu 使用
 
+按照作者的介绍,**kernelSu** 除了可以直接给 **root** 外,还可以更细腻的分配权限。
+
+当然官网没有给出详细的使用,我是从作者的 ``B站`` 看到的，搜索 ``术哥喜欢皮卡丘``您应该可以找到。
+
+![Alt text](image04.png)
+
+
+### kernelsu模块
+
+kernelsu 使用的 ``Magisk`` 的 ``BusyBox`` 和 ``overlayfs mount``机制 完成和 ``magisk``相同的 模块功能。
+所以理论上,大部分``magisk``模块都可以适用在 ``kernelsu``上面
+
+当然与 ``magisk`` 模块也有差异
+具体参考: [https://kernelsu.org/zh_CN/guide/difference-with-magisk.html](https://kernelsu.org/zh_CN/guide/difference-with-magisk.html)
+
+``kernelsu``不像 magisk 那样自动携带的 ``zygisk``,所以要提供 ``zygisk``的支持,需要使用到``ZygiskOnKernelSu``的模块。
+
+模块地址在:[https://github.com/Dr-TSNG/ZygiskOnKernelSU](https://github.com/Dr-TSNG/ZygiskOnKernelSU)
+
+
+首先我们将``ZygiskOnKernelSu``进行下载:
+```
+wget “https://github.com/Dr-TSNG/ZygiskOnKernelSU/releases/download/v4-0.7.1/Zygisk-on-KernelSU-v4-0.7.1-89-release.zip” -O "Zygisk-on-KernelSU-v4-0.7.1-89-release.zip"
+
+adb push .\Zygisk-on-KernelSU-v4-0.7.1-89-release.zip /sdcard/
+```
+
+随后通过``kernelsu app``进行安装
+
+安装完后,在安装``Zygisk - Lsposed``,并进行查看
+
+![Alt text](image05.png)
+
+![Alt text](image06.png)
+
+但此时 ``zygisk``暴露出来了,所以我们还需要安装``shamiko``
+
+```
+wget "https://github.com/LSPosed/LSPosed.github.io/releases/download/shamiko-174/Shamiko-v0.7.3-174-release.zip" -O "Shamiko-v0.7.3-174-release.zip"
+
+adb push Shamiko-v0.7.3-174-release.zip /sdcard/
+```
+
+查看下 ``momo``
+
+![Alt text](image07.png)
+
+**kernelsu 的 root 未检查到,zygisk 也未检测到**
+
+但是因为现在的``aosp`` 采用的 ``userdebug`` 构建的,并且使用``adb remount``挂载了分区,所以还是被检测到了异常。但这些异常并不是
+``kernelsu``被检测到了。
+
+要解决的话我们得修改 ``aosp``的代码,将构建的``userdebug``伪造成``user``,并且需要把指纹签名重弄一遍。
+``debug_cat``做到了,我看了半天,决定放弃,不是我能搞的。
+
+所以下一节我打算直接采用 官方出厂镜像 覆盖``kernel启动镜像``重试一遍。
+
+也打算结束此次教程了。
+
+结束后我打算发在 ``github``上面,欢迎``star``来满足我的虚荣心。
