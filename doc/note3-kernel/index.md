@@ -125,6 +125,9 @@ adb push *.ko /vendor/lib/modules
 因为本身 ``vendor``分区是不可写的,想刷入 **.ko** 内核模块,必须用 ``remount`` 挂载成可写的
 
 **(原谅我并不是一个好人)**
+
+>理论上只要能解压vendor.img 并且可以重新修改打包vendor.img,那么就不需要采用overlayfs挂载的方式进行覆盖ko内核模块，这是一种可以排除userdebug的解决方案
+
 ```
 source build/envsetup.sh
 
