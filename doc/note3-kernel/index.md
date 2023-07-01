@@ -126,7 +126,7 @@ adb push *.ko /vendor/lib/modules
 
 **(原谅我并不是一个好人)**
 
->理论上只要能解压vendor.img 并且可以重新修改打包vendor.img,那么就不需要采用overlayfs挂载的方式进行覆盖ko内核模块，这是一种可以排除userdebug的解决方案
+>理论上只要能解压vendor.img 并且可以重新修改打包vendor.img,那么就不需要采用overlayfs挂载的方式进行覆盖.ko内核模块。但是这需要了解挂载技术,还需要了解 挂载目录修改后 如何重新打包,这方面我并不了解,也查不到想要的答案,可能是我搜索方面有点欠妥
 
 ```
 source build/envsetup.sh
