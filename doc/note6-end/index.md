@@ -1,4 +1,4 @@
-# android-pixel4a-刷机系列-(6)最终的修补
+# android-pixel4a-刷机系列-(6)出厂镜像编译kernelsu内核
 
 使用 ``userdebug`` 构建的 ``aosp`` 很容易被检测。
 
@@ -12,6 +12,7 @@
 
 但是都做到这个地步了，所以我们只能尝试用 官方出厂镜像修改,就不折腾``aosp``了,毕竟改了后还得重新编译。
 
+**后面内容就算把所有坑都填上了。**
 
 ## 刷入出厂镜像
 
@@ -74,15 +75,17 @@ sh flash-all.sh
 **这其实是我出现的问题,当时把我吓尿了**
 
 原因:个人觉得跟 之前使用 ``userdebug``版本有关系。
-因为我设置了 ``adb remount`` 并覆盖了 ``vendor``分区中的模块,因为``remount``采用的``overlayfs``堆叠的方式,具体可以查看一些资料
+因为我设置了 ``adb remount`` 并覆盖了 ``vendor``分区中的模块,因为``remount``采用的``overlayfs``堆叠的方式。
+我查到了一些很不错的资料:[https://blog.csdn.net/guyongqiangx/article/details/128881282](https://blog.csdn.net/guyongqiangx/article/details/128881282)
 
 所以可能 ``overlayfs``挂载的 ``vendor``依旧未卸载？？？,导致``vendor``的模块不一致？？？
 
 这是我觉得很有可能得事情,可是网上我搜不到任何关于这方面的资料,问``chatgpt``也无济于事。
 
 为了解决这个问题,我考虑了几种方案
-1.刷机刷到``b``槽,并激活,但是之前挂载的``vendor``怎么办?所以我放弃了这种
-2.刷入完整的 OTA 映像
+
+- 刷机刷到``b``槽,并激活,但是之前挂载的``vendor``怎么办?所以我放弃了这种
+- 刷入完整的 OTA 映像
 
 我采用的第二种:参考官方文档
 [https://developers.google.com/android/ota?hl=zh-cn#sunfish](https://developers.google.com/android/ota?hl=zh-cn#sunfish)
@@ -210,12 +213,26 @@ March 20 也就是 3月份的时候
 
 ![Alt text](image04.png)
 
-如果选的版本和你当前的不匹配。
-那么,你应该会带着骂人的话,重新再刷一遍手机。
+在解包 ``boot.img``的``boot.img-kernel`` 中可以看到内核版本号是``4.14.295-g84b42e6a786c-ab9578266``
+```
+Rinitcall_debugLinux version 4.14.295-g84b42e6a786c-ab9578266 (android-build@abfarm-2004-0229) (A!� (7284624, based on r416183b) clangv�12.0.5 (https://d�H.googlesource.com/toolchain/llvm-project c935d99d7cf2016289302412d708641d52d2f7ee), LLDo/�tbot/srcuZi9outmO/lldq�!) #1 SMP PREEMPT Wed Feb 8 04:47:36 UTC 2023
+```
+
+其中``4.14.295``在 ``Markfile``中
+
+![Alt text](image05.png)
+
+而 ``84b42e6a786c``是提交的``id``,可以进入``private/msm-google``使用 ``git log 84b42e6a786c``进行查看:
+
+![Alt text](image06.png)
+
+如果你想完全一致,可以使用``git checkout 84b42e6a786c``来检出这个提交。
+
+所以现在,你应该会带着骂人的话,重新再刷一遍手机,以达到 手机系统的内核与你编译的内核一致
 
 
->如果刷机出现了Cannot load Android system. Your data may be corrupt....提示数据损坏等消息,可以尝试使用 ``fastboot erase userdata``。
-它会让你 erase(擦除) userdata 选择一下就可以。这可能是跟降级更新有关系,好吧,这又是我踩到的坑
+>如果刷机出现了Cannot load Android system. Your data may be corrupt....提示数据损坏等消息,
+它会让你 erase(擦除) userdata 选择一下就可以。这可能是跟降级更新有关系。好吧,这又是我踩到的坑
 
 ### 测试自编译内核
 
@@ -229,7 +246,409 @@ fastboot reboot bootloader
 fastboot boot Image.lz4-dtb
 ```
 
-但是此时你会发现,卡在启动页面了,无法启动。这就是 碎片化内核的问题。
-下游的``内核模块``不和``启动内核匹配``。
-所以我们接下来得重打包 ``vendor.img`` ,替换内核模块
 
+但是此时你会发现,**卡在启动log页面了**
+
+
+
+## 解决内核模块与内核对应问题
+
+通过 ``dmesg`` 查看内核日志发现了大量的:
+
+```
+...
+[   28.861688] init: Control message: Could not find 'android.hardware.sensors@2.0::ISensors/default' for ctl.interface_start from pid: 652 (/system/bin/hwservicemanager)
+[   28.861963] adsprpc: bad ioctl: -1072934383
+[   28.871840] adsprpc: bad ioctl: -1072934383
+[   28.883564] adsprpc: bad ioctl: -1072934383
+[   28.892785] adsprpc: bad ioctl: -1072934383
+[   28.899394] adsprpc: bad ioctl: -1072934383
+[   28.915591] adsprpc: bad ioctl: -1072934383
+[   28.924410] adsprpc: bad ioctl: -1072934383
+[   28.927512] adsprpc: bad ioctl: -1072934383
+[   28.947871] adsprpc: bad ioctl: -1072934383
+```
+
+
+跟踪源码得知某个 ``case``条件没有匹配上。 
+
+![Alt text](image07.png)
+
+那么肯定是 ``vendor``的内核模块 与 ``kernel``启动内核不匹配,供应商修改了 内核代码。
+
+这应该就是内核碎片话问题。 下游 ``vendor`` 调用上游 ``kernel``代码不匹配
+
+我想过几种方案啊:
+- 修改vendor分区
+(尝试 mount 进行修改,可惜是只读的,放弃)
+
+- 手动编译vendor (看不懂 markfile 配置,放弃)
+
+- 修改版本检测代码(尝试修改 modversions 和 module magic 校验,失败,原因不明,但是错误日志确实少了很多)
+
+
+以上全部失败,耗费好几天时间,把我折磨的欲仙欲死,一度想放弃
+
+最后研究如何将内核模块整合在 ``boot``里面,可算有了思路。
+
+两种方案:
+1. 将内核模块直接整合到启动内核中
+2. ramdisk 整合
+
+
+在研究这两种方案的时候,我查阅了很多资料,发现有一个特别棒的博客
+
+来自``seeFlowerX``的:``https://blog.seeflower.dev/archives/174``。
+
+所以我采用 ``ramdisk`` 进行整合驱动内核模块
+
+### 了解供应商ramdisk模块加载位置
+
+参考资料: ``https://source.android.com/docs/core/architecture/kernel/kernel-module-support?hl=zh-cn``
+
+通用内核映像 (GKI) 可能不包含使设备能够装载分区所需的驱动程序支持。为了使设备能够装载分区并继续启动，增强了第一阶段 init，用于加载 ramdisk 上的内核模块。ramdisk 被拆分为通用 ramdisk 和供应商 ramdisk。供应商内核模块存储在供应商 ramdisk 中。内核模块加载的顺序可以配置。
+
+
+注意一些主要内容: ramdisk 拆分成 通用 ramdisk 和 供应商 ramdisk。 供应商内核模块存储在供应商 ramdisk 中
+
+关于模块位置的描述:
+（作为供应商 ramdisk 存储在供应商启动分区中）包含以下组件：
+- 第一阶段 init 供应商内核模块，位于 /lib/modules/
+- modprobe 配置文件，位于 /lib/modules/：modules.dep、modules.softdep、modules.alias、modules.options
+- 一个 modules.load 文件，用于指示在第一阶段 init 期间加载的模块及相应的加载顺序，位于 /lib/modules/
+- 供应商恢复内核模块，用于 A/B 和虚拟 A/B 设备，位于 /lib/modules/
+- modules.load.recovery，用于指示要加载的模块及相应的加载顺序，用于 A/B 和虚拟 A/B 设备，位于 /lib/modules
+
+第二个 cpio 归档（作为 boot.img 的 ramdisk 随 GKI 提供，应用在第一个 cpio 归档之上）包含 first_stage_init 及其依赖的库。
+
+
+**问题来了!!**
+``ramdisk`` 是啥？它在哪里？
+
+首先,关于``ramdisk``我并没有在 ``android sources``  中搜索到满意的描述,可能是属于``linux``内容？但是按照查找的资料来说 ``ramdisk`` 是种基于
+``内存的磁盘``,用于提供访问速度。 在 ``android``中将``ramdisk``做为 开机时候的启动项,里面包含了``init`` 作为用户进程第一个执行程序。
+
+ramdisk 接口可以看官方的描述:
+```
+https://source.android.com/docs/core/architecture/partitions/generic-boot?hl=zh-cn#boot-images-contents
+
+通用 ramdisk 包含以下组件。
+
+init
+system/etc/ramdisk/build.prop
+ro. PRODUCT .bootimg.* build道具
+debug_ramdisk/ 、 mnt/ 、 dev/ 、 sys/ 、 proc/ 、 metadata/
+first_stage_ramdisk/
+debug_ramdisk/ 、 mnt/ 、 dev/ 、 sys/ 、 proc/ 、 metadata/
+```
+
+记住之前的一段话 ``（作为 boot.img 的 ramdisk 随 GKI 提供，应用在第一个 cpio 归档之上）包含 first_stage_init 及其依赖的库。``
+
+那么``通用 ramdisk`` 应该是在 **boot.img** 中,使用 ``android image kitchen`` 解包后确实有这个文件:
+
+![Alt text](image08.png)
+
+打开看看:
+
+![Alt text](image09.png)
+
+发现它跟我们``cd /``查看手机根目录的内容差不多。 并且按照网上一些零散的资料来看,``通用 ramdisk``会挂载到``根目录``
+
+但是``供应商 ramdisk``在哪里呢？
+
+``ramdisk``一般采用 ``cpio归档``,我们查看 ``android kernel`` 的 ``build/build.sh`` 脚本 搜索``.cpio``,你会发现:
+
+![Alt text](image10.png)
+
+它会将``initramfs.cpio``打包成``initramfs.img``。
+
+``initramfs.cpio``就是``供应商的ramdisk``,那么 ``initramfs.cpio``在哪里呢?
+
+查看``${MODULES_STAGING_DIR}``这个变量,可以推断出它在``~/aosp/android-kernel/out/android-msm-pixel-4.14/staging/``中。
+
+![Alt text](image11.png)
+
+打开这个文件,你会发现只有``lib/modules``
+
+![Alt text](image12.png)
+
+注意``modules.load``文件,这里面配置了加载的模块
+
+```
+kernel/fs/incfs/incrementalfs.ko
+kernel/drivers/video/backlight/lcd.ko
+kernel/drivers/soc/qcom/llcc_perfmon.ko
+kernel/drivers/char/rdbg.ko
+kernel/drivers/input/touchscreen/heatmap.ko
+kernel/drivers/input/misc/drv2624.ko
+kernel/drivers/media/rc/msm-geni-ir.ko
+kernel/drivers/media/platform/msm/dvb/adapter/mpq-adapter.ko
+kernel/drivers/media/platform/msm/dvb/demux/mpq-dmx-hw-plugin.ko
+kernel/drivers/media/usb/gspca/gspca_main.ko
+kernel/drivers/platform/msm/msm_11ad/msm_11ad_proxy.ko
+kernel/techpack/audio/soc/pinctrl_wcd_dlkm.ko
+kernel/techpack/audio/soc/pinctrl_lpi_dlkm.ko
+kernel/techpack/audio/soc/swr_dlkm.ko
+kernel/techpack/audio/soc/snd_event_dlkm.ko
+kernel/techpack/audio/soc/swr_ctrl_dlkm.ko
+kernel/techpack/audio/dsp/codecs/native_dlkm.ko
+kernel/techpack/audio/dsp/q6_dlkm.ko
+kernel/techpack/audio/dsp/usf_dlkm.ko
+kernel/techpack/audio/dsp/adsp_loader_dlkm.ko
+kernel/techpack/audio/dsp/q6_pdr_dlkm.ko
+kernel/techpack/audio/dsp/q6_notifier_dlkm.ko
+...
+```
+
+### 打包boot通用ramdisk和供应商ramdisk
+
+现在问题来了,如何处理 ``boot通用ramdisk`` 和  ``供应商ramdisk`` 呢?
+
+首先,你要知道一点,我们要做什么。 是不是就是能够将 **内核** 编译出来的 **内核模块** 能够加载进去,让手机能够开机？
+
+而目前得到的资料来说,**供应商内核模块** 最终从 ``vendor/lib/modules``处加载。 可是``vendor``修改太困难,我们得从方便修改的``boot.img``出发。
+
+所以要将 ``boot通用ramdisk`` 和  ``供应商ramdisk``  合并成一个 ``ramdisk``。
+
+这里需要了解点知识,``boot.img``是由``mkbootimg``生成,您应该可以在``aosp``源码找到,或者从``out/host/linux-x86/bin/``的构建目录中发现这个工具。
+
+``android imgage kitchen``其实也可以发现``mkbootimg``
+
+查看``mkbootimg``命令
+
+```
+./mkbootimg  --help
+usage: mkbootimg [-h] [--kernel KERNEL] [--ramdisk RAMDISK] [--second SECOND]
+                 [--dtb DTB]
+                 [--recovery_dtbo RECOVERY_DTBO | --recovery_acpio RECOVERY_ACPIO]
+                 [--cmdline CMDLINE] [--vendor_cmdline VENDOR_CMDLINE]
+                 [--base BASE] [--kernel_offset KERNEL_OFFSET]
+                 [--ramdisk_offset RAMDISK_OFFSET]
+                 [--second_offset SECOND_OFFSET] [--dtb_offset DTB_OFFSET]
+                 [--os_version OS_VERSION] [--os_patch_level OS_PATCH_LEVEL]
+                 [--tags_offset TAGS_OFFSET] [--board BOARD]
+                 [--pagesize {2048,4096,8192,16384}] [--id]
+                 [--header_version HEADER_VERSION] [-o OUTPUT]
+                 [--vendor_boot VENDOR_BOOT] [--vendor_ramdisk VENDOR_RAMDISK]
+                 [--vendor_bootconfig VENDOR_BOOTCONFIG]
+                 [--gki_signing_algorithm GKI_SIGNING_ALGORITHM]
+                 [--gki_signing_key GKI_SIGNING_KEY]
+                 [--gki_signing_signature_args GKI_SIGNING_SIGNATURE_ARGS]
+                 [--gki_signing_avbtool_path GKI_SIGNING_AVBTOOL_PATH]
+```
+在这里你需要提供几个重要的东西
+- ``--kernel`` 内核的二进制文件,其实就是我们编译出的``Image.lz4``
+- ``--ramdisk`` 这个最终就是我们要传递的 ``boot通用ramdisk`` 和  ``供应商ramdisk``合成的``ramdisk``
+- ``dtb`` 我并没有研究这块,但是我们编译内核确实有``dtb.img``的产物
+- ``--vendor_ramdisk`` 这个应用于 ``gki`` 内核,可以单独传入 ``供应商ramdisk``,我们并不是``gki内核``,所以不传
+- .... 其余参数后续在说
+
+
+理论上,我们填好参数,就能够编译携带 ``供应商内核模块`` 的``boot.img``。
+
+但是参考``seeFlowerX``这位大牛的博客,发现其实``android kernel``的``build/build.sh``拥有构建``boot.img``的能力
+
+![Alt text](image13.png)
+
+注意:``echo " Files copied to ${DIST_DIR}"`` 后面的内容,我们只需要在调用构建脚本的时候定义``BUILD_BOOT_IMG``变量,即可构建``boot.img``。
+
+按照脚本上的注释来说:
+
+![Alt text](image14.png)
+
+如果是非``gki``的镜像,我们需要传递下面几个参数:
+```
+# 是否构建 boot.img
+BUILD_BOOT_IMG 
+
+# mkbootimg 工具路径
+MKBOOTIMG_PATH
+
+# 对于 非 gki 内核来说,ramdisk 传递 boot 通用 ramdisk 。也就是 ``boot.img-ramdisk.gz``
+VENDOR_RAMDISK_BINARY
+
+# boot 内核参数
+KERNEL_CMDLINE
+
+# base 地址
+BASE_ADDRESS
+
+# 页面大小
+PAGE_SIZE
+```
+
+### 编写构建bootimg脚本
+
+由于``build/build.sh`` 脚本构建``boot.img``是需要编译 ``kernel`` 后才构建``boot``。但是我们现在是已经构建完了,如果在构建一次就会比较麻烦了。
+
+所以我将关键用于构建``boot.img``的地方抽出,写了个``build_bootimg.sh``
+
+![Alt text](image15.png)
+
+
+在此使用脚本之前,需要做下准备工作,比如有几个参数需要您传递:
+```
+export VENDOR_RAMDISK_BINARY=/home/zhangxuan/Desktop/android_image_kitchen/boot.img-ramdisk.gz
+export BUILD_BOOT_IMG=1
+export BASE_ADDRESS=0x00000000
+export PAGE_SIZE=4096
+export KERNEL_CMDLINE="console=ttyMSM0,115200n8 androidboot.console=ttyMSM0 printk.devkmsg=on \
+msm_rtb.filter=0x237 ehci-hcd.park=3 service_locator.enable=1 androidboot.memcg=1 cgroup.memory=nokmem \
+lpm_levels.sleep_disabled=1 usbcore.autosuspend=7 loop.max_part=7 androidboot.usbcontroller=a600000.dwc3 \ 
+swiotlb=1 androidboot.boot_devices=soc/1d84000.ufshc cgroup_disable=pressure buildvariant=user"
+```
+
+这些参数如何得来呢? 之前说过构建``boot.img``可以用``mkbootimg``。其实也有个解包的工具``unbootimg``。
+这个也在``android image kitchen``中,所以我们只需要调用 ``android image kitchen``的``unpackimg.sh``脚本,它会输出这些参数,随便
+还可以获取到``split_img/boot.img-ramdisk.gz``文件
+
+将出厂镜像``boot.img``放入 ``aik``中,调用``unpackimg.sh``你会得到:
+
+![Alt text](image16.png)
+
+
+下面脚本有点长,但你只需要修改最上面的参数:
+``` shell
+
+# $0 filename 
+#readlink : absolute path
+export ROOT_DIR=$(readlink -f $(dirname $0)/..)
+
+source "${ROOT_DIR}/build/_setup_env.sh"
+export MODULES_STAGING_DIR=$(readlink -m ${COMMON_OUT_DIR}/staging)
+
+
+export VENDOR_RAMDISK_BINARY=/home/zhangxuan/Desktop/android_image_kitchen/AIK-Linux/split_img/boot.img-ramdisk.cpio.gz
+export BUILD_BOOT_IMG=1
+export BASE_ADDRESS=0x00000000
+export PAGE_SIZE=4096
+export KERNEL_CMDLINE="console=ttyMSM0,115200n8 androidboot.console=ttyMSM0 printk.devkmsg=on \
+msm_rtb.filter=0x237 ehci-hcd.park=3 service_locator.enable=1 androidboot.memcg=1 cgroup.memory=nokmem \
+lpm_levels.sleep_disabled=1 usbcore.autosuspend=7 loop.max_part=7 androidboot.usbcontroller=a600000.dwc3 \ 
+swiotlb=1 androidboot.boot_devices=soc/1d84000.ufshc cgroup_disable=pressure buildvariant=user"
+export KERNEL_BINARY="Image.lz4"
+export BOOT_IMAGE_HEADER_VERSION=2
+
+echo "=============================="
+echo "env variables:"
+echo "ROOT_DIR :${ROOT_DIR} "
+echo "COMMON_OUT_DIR :${COMMON_OUT_DIR} "
+echo "MODULES_STAGING_DIR :${MODULES_STAGING_DIR} "
+echo "OUT_DIR :${OUT_DIR} "
+echo "DIST_DIR :${DIST_DIR} "
+echo "BUILD_BOOT_IMG :${BUILD_BOOT_IMG} "
+echo "BASE_ADDRESS :${BASE_ADDRESS} "
+echo "PAGE_SIZE :${PAGE_SIZE} "
+echo "KERNEL_CMDLINE :${KERNEL_CMDLINE} "
+echo "VENDOR_RAMDISK_BINARY :${VENDOR_RAMDISK_BINARY} "
+echo "KERNEL_BINARY :${KERNEL_BINARY} "
+echo "BOOT_IMAGE_HEADER_VERSION :${BOOT_IMAGE_HEADER_VERSION} "
+
+# 是否构建 boot.img
+if [ ! -z "${BUILD_BOOT_IMG}" ] ; then
+
+  # mkbootimg 参数列表
+	MKBOOTIMG_ARGS=()
+
+  # 基础参数
+	if [ -n  "${BASE_ADDRESS}" ]; then
+		MKBOOTIMG_ARGS+=("--base" "${BASE_ADDRESS}")
+	fi
+	if [ -n  "${PAGE_SIZE}" ]; then
+		MKBOOTIMG_ARGS+=("--pagesize" "${PAGE_SIZE}")
+	fi
+	if [ -n "${KERNEL_CMDLINE}" ]; then
+		MKBOOTIMG_ARGS+=("--cmdline" "${KERNEL_CMDLINE}")
+	fi
+
+  # 设置 --dtb 为内核构建出来的
+	DTB_FILE_LIST=$(find ${DIST_DIR} -name "*.dtb")
+	if [ -z "${DTB_FILE_LIST}" ]; then
+		if [ -z "${SKIP_VENDOR_BOOT}" ]; then
+			echo "No *.dtb files found in ${DIST_DIR}"
+			exit 1
+		fi
+	else
+		cat $DTB_FILE_LIST > ${DIST_DIR}/dtb.img
+		MKBOOTIMG_ARGS+=("--dtb" "${DIST_DIR}/dtb.img")
+	fi
+
+  # VENDOR_RAMDISK_BINARY 为 boot 通用 ramdisk 的路径
+  # initramfs.cpio 为 内核构建出来的 供应商 ramdisk
+	set -x
+	MKBOOTIMG_RAMDISKS=()
+	for ramdisk in ${VENDOR_RAMDISK_BINARY} \
+		       "${MODULES_STAGING_DIR}/initramfs.cpio"; do
+		if [ -f "${DIST_DIR}/${ramdisk}" ]; then
+			MKBOOTIMG_RAMDISKS+=("${DIST_DIR}/${ramdisk}")
+		else
+			if [ -f "${ramdisk}" ]; then
+				MKBOOTIMG_RAMDISKS+=("${ramdisk}")
+			fi
+		fi
+	done
+
+  echo "MKBOOTIMG_RAMDISKS len:${#MKBOOTIMG_RAMDISKS[@]} \
+    MKBOOTIMG_RAMDISKS[*]:${MKBOOTIMG_RAMDISKS[*]}
+    "
+
+  # 将 boot ramdisk 和 vendor ramdisk 尝试解压 gzip 提取 cpio归档 
+	for ((i=0; i<"${#MKBOOTIMG_RAMDISKS[@]}"; i++)); do
+		CPIO_NAME="$(mktemp -t build.sh.ramdisk.XXXXXXXX)"
+		if gzip -cd "${MKBOOTIMG_RAMDISKS[$i]}" 2>/dev/null > ${CPIO_NAME}; then
+			MKBOOTIMG_RAMDISKS[$i]=${CPIO_NAME}
+		else
+			rm -f ${CPIO_NAME}
+		fi
+	done
+
+  # 将  boot ramdisk 和 vendor ramdisk 合并成一个 ramdisk
+  rm -f ${DIST_DIR}/ramdisk.gz
+	if [ "${#MKBOOTIMG_RAMDISKS[@]}" -gt 0 ]; then
+		cat ${MKBOOTIMG_RAMDISKS[*]} | gzip - > ${DIST_DIR}/ramdisk.gz
+	elif [ -z "${SKIP_VENDOR_BOOT}" ]; then
+		echo "No ramdisk found. Please provide a GKI and/or a vendor ramdisk."
+		exit 1
+	fi
+	set -x
+
+  # mkbootimg 
+	if [ -z "${MKBOOTIMG_PATH}" ]; then
+		MKBOOTIMG_PATH="tools/mkbootimg/mkbootimg.py"
+	fi
+	if [ ! -f "$MKBOOTIMG_PATH" ]; then
+		echo "mkbootimg.py script not found. MKBOOTIMG_PATH = $MKBOOTIMG_PATH"
+		exit 1
+	fi
+
+	if [ ! -f "${DIST_DIR}/$KERNEL_BINARY" ]; then
+		echo "kernel binary(KERNEL_BINARY = $KERNEL_BINARY) not present in ${DIST_DIR}"
+		exit 1
+	fi
+
+	if [ "${BOOT_IMAGE_HEADER_VERSION}" -eq "3" ]; then
+		if [ -f "${GKI_RAMDISK_PREBUILT_BINARY}" ]; then
+			MKBOOTIMG_ARGS+=("--ramdisk" "${GKI_RAMDISK_PREBUILT_BINARY}")
+		fi
+
+		if [ -z "${SKIP_VENDOR_BOOT}" ]; then
+			MKBOOTIMG_ARGS+=("--vendor_boot" "${DIST_DIR}/vendor_boot.img" \
+				"--vendor_ramdisk" "${DIST_DIR}/ramdisk.gz")
+			if [ -n "${KERNEL_VENDOR_CMDLINE}" ]; then
+				MKBOOTIMG_ARGS+=("--vendor_cmdline" "${KERNEL_VENDOR_CMDLINE}")
+			fi
+		fi
+	else
+		MKBOOTIMG_ARGS+=("--ramdisk" "${DIST_DIR}/ramdisk.gz")
+	fi
+
+	set -x
+	python "$MKBOOTIMG_PATH" --kernel "${DIST_DIR}/${KERNEL_BINARY}" \
+		--header_version "${BOOT_IMAGE_HEADER_VERSION}" \
+		"${MKBOOTIMG_ARGS[@]}" -o "${DIST_DIR}/boot.img"
+	set +x
+
+	echo "boot image created at ${DIST_DIR}/boot.img"
+fi
+
+```
