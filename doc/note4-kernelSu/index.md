@@ -1,9 +1,7 @@
 # android-pixel4a-刷机系列-(4)kernelsu整合内核
 
-你可以参考 ``debug选手``大佬的 ``Pixel3编译的Kernel SU 内核``。
+你可以参考 ``debug选手``大佬的 ``Pixel3编译的Kernel SU 内核``,这也是在这条路上指明方向的友人。
 地址来源: ``http://www.debuglive.cn/article/1091666763961073664``
-
-我也是基于 ``debug_cat``上进行 内核的修改。
 
 
 ## kernelSu 简介
