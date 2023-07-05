@@ -4,7 +4,7 @@
 
 ## 重编译
 
-首先我想到的是上一篇 出现 ``savedefconfig`` 不匹配的问题
+上一篇 出现 ``savedefconfig`` 不匹配的问题
 
 ```
 ....
@@ -47,25 +47,6 @@ config KSU
 
 ### 去掉 check_defconfig 
 
-在 ``build/build.sh`` 脚本中,我发现了这样一段代码
-```
-if [ -z "${SKIP_DEFCONFIG}" ] ; then
-set -x
-(cd ${KERNEL_DIR} && make "${TOOL_ARGS[@]}" O=${OUT_DIR} ${MAKE_ARGS} ${DEFCONFIG})
-set +x
-
-if [ -n "${POST_DEFCONFIG_CMDS}" ]; then
-  echo "========================================================"
-  echo " Running pre-make command(s):"
-  set -x
-  eval ${POST_DEFCONFIG_CMDS}
-  set +x
-fi
-fi
-```
-
-重点看 ``POST_DEFCONFIG_CMDS`` 这会在调用 ``make xx  xxx_defconfig`` 生成``.config``后调用一些命令。
-
 我们看下 ``private/msm-google/build.config`` 文件
 ```
 KERNEL_DIR=private/msm-google
@@ -100,11 +81,12 @@ function check_defconfig() {
 
 它里面就有 ``check_defconfig`` 方法,可以看到它通过 ``make ... savedefconfig`` 从``.config``提取的 ``defconfig``。
 并使用 ``diff``进行比较差异。
-这就难受了,因为我修改 ``arch/arm64/configs/xxx_defconfig``后。``make ... savedfconfig`` 从 ``.config``总是提取的 ``defconfig``成我未修改前的样子,**百思不得其解** **百思不得其解** **百思不得其解** 
 
-那好,砸门去掉这个。只不过不是去掉 ``build.config``里的。
+这就难受了,因为我修改 ``arch/arm64/configs/xxx_defconfig``后,他会和默认值进行比较,无论如何都不相等的。
 
-而是去掉 ``build_sunfish.sh``里的
+当然,砸门可以去掉这个。
+
+查看 ``build_sunfish.sh``脚本
 
 ![Alt text](image02.png)
 
@@ -117,6 +99,8 @@ BUILD_CONFIG=private/msm-google/build.config.sunfish_no-cfi build/build.sh "$@"
 ```
 KERNEL_DIR=private/msm-google
 . ${ROOT_DIR}/${KERNEL_DIR}/build.config.sunfish.common.clang
+
+#去掉check_defconfig
 #POST_DEFCONFIG_CMDS="check_defconfig && update_nocfi_config"
 POST_DEFCONFIG_CMDS="update_nocfi_config"
 
@@ -146,10 +130,76 @@ CONFIG_KPROBE_EVENTS=y
 
 ![Alt text](image03.png)
 
-### 构建时候强调点问题
-如果发现你已经改的很乱了,然后编译出现其他报错。
+### xxx_defconfig正确配置方式
+前面说的虽然也可以完成编译工作,但是我在浏览 ``saveconfig``的时候发现了个不错的文章:
+[https://www.adtxl.com/index.php/archives/124.html](https://www.adtxl.com/index.php/archives/124.html)
 
-那么请恢复之前可以构建的时候,在重新 拉 ``kernelsu``的代码
+按照文章所指示,我们应该这样操作:
+
+- ``make ARCH=arm64 sunfish_defconfig`` 生成``.config``文件
+- ``make ARCH=arm64 menuconfig`` 根据 ``.config``中``arm64``进行配置
+
+此时您应该进入了配置界面,输入``/``,搜索``KPROBE``。
+
+这里你要记住几个地方,``KPROBES``以及``KPROBE_EVENTS``这几个是没有开的:
+![Alt text](image08.png)
+
+![Alt text](image09.png)
+
+以此找到地方后,按``空格``进行选中:
+
+![Alt text](image10.png)
+
+对于``KPROBE_EVENTS``只要选择``KPROBE``就自动选中了:
+
+![Alt text](image11.png)
+
+选择 ``save`` 进行保存
+
+![Alt text](image12.png)
+
+接下来,我们需要生成修改过的``defconfig``,将``sunfish_defconfig``进行覆盖
+
+- ``make ARCH=arm64 savedefconfig`` 根据 ``.config`` 生成 ``defconfig``
+- ``cp defconfig arch/arm64/configs/sunfish_defconfig`` 覆盖 ``sunfish_defconfig``
+
+> 这样确实就没问题了,``check_defconfig``也不用去掉,但是我也没搞明白为什么这样生成的``defconfig``为什么可以一直保持,
+而手动修改的``sunfish_defconfig``确会导致``check_defconfig``不同
+
+
+接下来重新进行构建
+
+### 构建时候强调点问题
+
+如果构建的时候出现了下面的错误:
+```
+aosp/android-kernel/private/msm-google is not clean, please run 'make mrproper'
+```
+
+这代表某些配置没有删除干净。
+这段错误在 ``/private/msm-google/Makefile`` 中
+``` shell
+# prepare3 is used to check if we are building in a separate output directory,
+# and if so do:
+# 1) Check that make has not been executed in the kernel src $(srctree)
+prepare3: include/config/kernel.release
+ifneq ($(KBUILD_SRC),)
+	@$(kecho) '  Using $(srctree) as source for kernel'
+	$(Q)if [ -f $(srctree)/.config -o -d $(srctree)/include/config ]; then \
+		echo >&2 "  $(srctree) is not clean, please run 'make mrproper'"; \
+		echo >&2 "  in the '$(srctree)' directory.";\
+		/bin/false; \
+	fi;
+endif
+```
+意思大概是说,您需要保证``.config`` 和 ``include/config``是空的
+
+使用``rm -f .config`` 和 ``rm -rf include/config``。
+
+
+如果发现你从未见过的错误,那代表你可能乱改了某些地方。可通过 ``git checkout .``重新检出覆盖下内容,那么你将会需要重新配置。
+
+实在不行,全部清理重构,参考我下面的代码:
 
 ```
 # 只删除代码,不删除``repo``仓库
@@ -162,7 +212,7 @@ cd private/msm-google
 curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
 ```
 
-然后按照之前的配置重新配一遍安装即可
+然后按照之前的配置重新打包``boot.img``进行刷入即可
 
 ## kernelsu 使用
 

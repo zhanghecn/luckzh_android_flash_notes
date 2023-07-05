@@ -654,3 +654,9 @@ if [ ! -z "${BUILD_BOOT_IMG}" ] ; then
 fi
 
 ```
+
+其中还要注意一点,我并没有指定``MKBOOTIMG_PATH`` 路径,因为它默认是 ``"tools/mkbootimg/mkbootimg.py"``
+
+## 
+
+最终操作 ``fastboot flash boot boot.img``
