@@ -47,13 +47,13 @@ GKI 内核是什么意思呢？
 
 **(所以之前刷内核 必须同步 vendor 的 .ko 内核模块是因为 内核版本的问题？？？希望大佬解答)**
 
-所以这也是为什么 **kernelSu** 只提供 **GKI** 的内核镜像。 否则很难适配各自的 **内核模块 .ko文件**
+这应该也是为什么 **kernelSu** 只提供 **GKI** 的内核镜像。 否则很难适配各自的 **供应商内核模块对应的内核版本**
 
 下面是 GKI 通用内核镜像的架构图:
 
 ![Alt text](image03.png)
 
-基于 GKI 通用内核的方便性,我们只需要 刷入修改过内核的 **boot.img** 即可。对于其内核模块 则应该无需考虑,应为按道理它是通过 ``KMI``与GKI 内核交互的,而不需重建内核模块。当然 KMI 兼容性是和 GKI 内核版本挂钩的,注意下内核版本。
+基于 GKI 通用内核的方便性,我们只需要 刷入修改过内核的 **boot.img** 即可。对于其内核模块 则应该无需考虑,应为按道理它是通过 ``KMI``与GKI 内核交互的,而不需重建内核模块。当然 KMI 兼容性是和 GKI 内核版本挂钩的,还是稍微得注意下内核版本。
 
 由于我并没有 GKI 内核的设备。 以上只是个人猜测。
 
@@ -89,6 +89,8 @@ modprobe 配置文件，位于 /lib/modules
 modules.load 文件，用于指示要在第一阶段 init 期间加载的模块
 引导加载程序要求
 引导加载程序必须在加载完供应商 ramdisk CPIO 映像（从 vendor_boot 分区）后，立即将通用 ramdisk CPIO 映像（从 boot 分区）加载到内存中。解压缩后，结果是通用 ramdisk 叠加在供应商 ramdisk 的文件结构之上。
+
+>到这里其实就能发现一点,供应商内核模块不仅仅可以在 vendor/lib/modules 中,还可以放在 vendor ramdisk 中的 /lib/modules 中,并通过 modules.load 指定加载,这应该可以解决上一篇 内核模块的问题。但这里是 gki 内核,拥有vendor_boot 分区,我们并没有。
 
 ### GKI内核刷入KernelSu
 您可以到他的**github release** 中下载对应内核的 **boot.img** 进行刷入(建议用``AnyKernel3``刷机包)。由于我并没有 基于 GKI 内核的
@@ -151,12 +153,17 @@ ERROR: savedefconfig does not match private/msm-google/arch/arm64/configs/sunfis
 
 大致能理解的是有几个配置文件分别是
 ```
+# menuconfig 配置项
 Kconfig
+# 通过 .config 生成的选择指定架构的定义项 
 xxx_defconfig
+# 通过 menuconfig 配置后的 .config
 .config
 ```
 
-### Kconfig
+下面我将进行操作
+
+### 配置KernelSu
 Kconfig 在每个目录下都有,就比如你进入``kernelsu`` 就会发现这个 Kconfig文件
 ```
 cd private/msm-google/drivers/kernelsu
@@ -164,17 +171,7 @@ ls |grep config
 Kconfig
 ```
 
-这有什么用呢？
-按照查到的资料来说
-Kconfig 可以参与到 menuconfig 的配置。这样我们可以很容易配置每个内核模块的选项。
-最终会生成 ``.config``文件,随后 ``makefile``  会根据这个 ``.config``生成带宏定义信息的头部文件参与编译
-
-我们可以在 内核源码根目录运行 ``make menuconfig`` 
-你会看到这种界面
-
-![Alt text](image04.png)
-
-然后输入 ``/`` 进入搜索界面，输入 ``ksu`` 也就是 ``KernelSu`` 中的 ``Kconfig``配置
+查看 ``Kconfig``中,发现他已经给我们定义好了``OVERLAY_FS``选项以及``KSU_DEBUG``
 ```
 menu "KernelSU"
 
@@ -195,7 +192,15 @@ config KSU_DEBUG
 endmenu
 ```
 
-你会看到这个界面
+我们可以在菜单配置选项界面进行配置
+
+在内核源码根目录运行 ``make menuconfig`` 
+你会看到这种界面
+
+![Alt text](image04.png)
+
+然后输入 ``/`` 进入搜索界面，输入 ``ksu`` 也就是 ``KernelSu`` 中的 ``Kconfig``配置
+
 
 ![Alt text](image05.png)
 
@@ -235,22 +240,6 @@ config KSU
 - `m`（module）：选择此选项表示将 "KernelSU" 功能编译为内核模块，可以在运行时加载和卸载。使用模块的方式可以在不重新编译整个内核的情况下启用或禁用 "KernelSU"。
 
 因此，通过选择适当的值（`y`、`n` 或 `m`），可以决定是否启用 "KernelSU" 功能，并确定它是作为内核的一部分编译还是作为可加载的内核模块进行处理。
-```
-
-注意
-```
-menu "KernelSU"
-
-config KSU
-	tristate "KernelSU function support"
-	select OVERLAY_FS
-	default y
-	help
-	Enable kernel-level root privileges on Android System.
-```
-中的     
-```
-select OVERLAY_FS
 ```
 
 在回顾之前的错误
@@ -442,4 +431,6 @@ adb shell cat /proc/kmsg |tee android_kmsg.log
 [ 1417.165968] KernelSU: error: 0, sid: 833
 ```
 
-当然我这里的日志是通过的,下一节就说怎么修复。
+当然我这里的日志是通过的,因为我解决了,但是难得重现问题记录笔记,但我可以明确告诉你是``kprobe``的配置问题。
+
+下一节将正式告诉你如何正确配置``defconfig``并启用``kprobe``。

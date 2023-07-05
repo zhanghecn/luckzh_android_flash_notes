@@ -1,7 +1,17 @@
 # android-pixel4a-刷机系列-(3)内核下载并编译
 
-参考来源: ``https://source.android.google.cn/docs/setup/build/building-kernels?hl=zh-cn``
-aosp 源码中的内核是已经编译好
+因为我是初学者,踩的坑比我预计的要多,试试难预料呀。
+
+各种错误,无处下手,一度想放弃。越往后,能查到的资料越少,是我搜索的关键词不对吗？
+
+与其说我这是个教程,不如叫做``踩坑笔记``
+
+
+本次资料参考来源: [https://source.android.google.cn/docs/setup/build/building-kernels?hl=zh-cn](https://source.android.google.cn/docs/setup/build/building-kernels?hl=zh-cn)
+
+以及 [http://www.debuglive.cn/article/1074036099963158528](http://www.debuglive.cn/article/1074036099963158528)
+
+在aosp 源码中的内核是已经编译好
 
 而当要修改内核的时候,就得对源码下手了,所以我们得从源码编译内核。
 
@@ -94,8 +104,9 @@ fastboot reboot
 ```
 
 大概清楚了一些东西
-1.Image.lz4和Image.lz4-dtb 貌似是不同的压缩格式的内核启动镜像
-2..ko文件是一些内核模块,如果不匹配就会无法开机,或者触屏 wifi 失效等情况
+
+1. Image.lz4和Image.lz4-dtb 貌似是不同的压缩格式的内核启动镜像
+2. .ko文件是一些内核模块,如果不匹配就会无法开机,或者触屏 wifi 失效等情况
 
 更多内核模块的说明参考:``https://source.android.com/docs/core/architecture/kernel/loadable-kernel-modules?hl=zh-cn``
 
@@ -103,7 +114,7 @@ fastboot reboot
 所以我们还需要把 ``.ko`` 集成到 ``vendor.img``里面去。
 但是``vendor`` 是在上一章刷机中是通过``https://developers.google.com/android/drivers?hl=zh-cn`` 下载的特定官方的 pixel 厂商的驱动二进制文件里来的,这并不是开源,所以没办法直接集成打包进去。
 
-所以我们得直接通过 ``adb``将 .ko 的内核模块全部 ``push`` 到 `` /vendor/lib/modules``中
+我们得直接通过 ``adb``将 .ko 的内核模块全部 ``push`` 到 `` /vendor/lib/modules``中
 ```
 # 禁用 dm-verity
 adb root
@@ -115,10 +126,15 @@ adb remount
 # push 到 vendor 分区对应的 内核模块的目录
 cd ~/aosp/android-kernel/out/android-msm-pixel-4.14/dist/
 adb push *.ko /vendor/lib/modules
+adb reboot
+
+# 建议之后重新开启dm-verity
+adb enable-verity
 ```
 
 如果lunch 选择的构建类型不是 userdebug 而是 user
-那么恭喜您,又成功踩坑了,  ``adb remount`` 只有在 **userdebug** 下才能运行 。这样您才可以使用 ``overlayfs``重新挂载成可写入的分区。
+
+那么您应该又踩坑了(好吧,这是我踩的坑),  ``adb remount`` 只有在 **userdebug** 下才能运行 。这样您才可以使用 ``overlayfs``重新挂载成可写入的分区。
 
 参考文档: [https://android.googlesource.com/platform/system/core/+/a9a3b73163fda5abf237cc0f0cee97ff33e6254d/fs_mgr/README.overlayfs.md](https://android.googlesource.com/platform/system/core/+/a9a3b73163fda5abf237cc0f0cee97ff33e6254d/fs_mgr/README.overlayfs.md)
 
@@ -126,8 +142,11 @@ adb push *.ko /vendor/lib/modules
 
 **(原谅我并不是一个好人)**
 
->理论上只要能解压vendor.img 并且可以重新修改打包vendor.img,那么就不需要采用overlayfs挂载的方式进行覆盖.ko内核模块。但是这需要了解挂载技术,还需要了解 挂载目录修改后 如何重新打包,这方面我并不了解,也查不到想要的答案,可能是我搜索方面有点欠妥
+>理论上只要能解压vendor.img 并且可以重新修改打包vendor.img,那么就不需要采用overlayfs挂载的方式进行覆盖.ko内核模块。但是目前来说我并没有找到关于修改vendor分区的工具以及资料。
 
+>不过貌似可以通过编写magisk模块,完成overlayfs 挂载 vendor 的操作
+
+下面是关于重新构建``userdebug``版本的操作:
 ```
 source build/envsetup.sh
 
@@ -158,9 +177,12 @@ m -j1
 刷进去后 通过下面命令查看当前内核版本
 ```
 adb shell
+# 您也可以通过 uname -a 查看内核版本信息
 cat /proc/version
 Linux version 4.14.295 (xxx@xxxx-virtual-machine) (Android (7284624, based on r416183b) clang version 12.0.5 (https://android.googlesource.com/toolchain/llvm-project c935d99d7cf2016289302412d708641d52d2f7ee), LLD 12.0.5 (/buildbot/src/android/llvm-toolchain/out/llvm-project/lld c935d99d7cf2016289302412d708641d52d2f7ee)) #1 repo:android-msm-sunfish-4.14-android13-qpr2 SMP PREEMPT Mon 
 ```
+
+
 查看编译的``Image.lz4-dtb``内核启动文件
 ```
 grep -a 'Linux version' Image.lz4-dtb
@@ -169,7 +191,6 @@ grep -a 'Linux version' Image.lz4-dtb
 ```
 ![Alt text](image01.png)
 
-内核版本算对应上了。。。
-哎不容易呀,真 浪费时间,编译了好几次 ``aosp``。每天就那样干等着
+内核版本算是刷进去了
 
 

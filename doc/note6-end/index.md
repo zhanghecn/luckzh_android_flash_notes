@@ -443,6 +443,8 @@ usage: mkbootimg [-h] [--kernel KERNEL] [--ramdisk RAMDISK] [--second SECOND]
 - ``--vendor_ramdisk`` 这个应用于 ``gki`` 内核,可以单独传入 ``供应商ramdisk``,我们并不是``gki内核``,所以不传
 - .... 其余参数后续在说
 
+这里我发现了 ``vendor_boot`` 和 ``vendor_ramdisk``。所以对于 **gki** 内核来说,``vendor ramdisk``应该转移到了``vendor_boot``。
+而不是``boot ramdisk``中,当然我们并不是``gki内核``,所以我们需要将``boot通用ramdisk``和``vendor ramdisk``进行合并。
 
 理论上,我们填好参数,就能够编译携带 ``供应商内核模块`` 的``boot.img``。
 
