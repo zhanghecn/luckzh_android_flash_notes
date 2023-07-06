@@ -1,6 +1,6 @@
 # android-pixel4a-刷机系列-(6)出厂镜像编译kernelsu内核
 
-O,我将这些教程发在了 [github](https://github.com/zhanghecn/luckzh_android_flash_notes) 上进行总和,欢迎``star``。
+O,我将这些教程发在了 github 上: [https://github.com/zhanghecn/luckzh_android_flash_notes](https://github.com/zhanghecn/luckzh_android_flash_notes) 上进行总和,欢迎``star``。
 
 使用 ``userdebug`` 构建的 ``aosp`` 很容易被检测。
 
@@ -551,7 +551,7 @@ ln -sf aosp/system/tools/mkbootimg tools/mkbootimg
 如果您当前并没有编译``kernelsu``,请参考**第五章内容**
 
 ## kernelsu 测试
-这跟根据第五章内容进行测试,为了提升阅读效果,节省内容篇幅。(好吧,确实是因为懒)
+请根据第五章内容进行测试,为了提升阅读效果,节省内容篇幅。(好吧,确实是因为懒)
 
 ## 总结
 之前说了很多,其实本次章节才是正确操作。
