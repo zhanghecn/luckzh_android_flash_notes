@@ -689,6 +689,7 @@ ln -sf aosp/system/tools/mkbootimg tools/mkbootimg
 如果您当前并没有编译``kernelsu``,请参考**第五章内容**
 
 ## kernelsu 测试
+这跟根据第五章内容进行测试,为了提升阅读效果,节省内容篇幅。(好吧,确实是因为懒)
 
 ## 总结
 之前说了很多,其实本次章节才是正确操作。
