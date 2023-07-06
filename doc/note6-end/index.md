@@ -292,12 +292,26 @@ fastboot boot Image.lz4-dtb
 1. 将内核模块直接整合到启动内核中
 2. ramdisk 整合
 
+当然这两种思路并不来自于我
 
-在研究这两种方案的时候,我查阅了很多资料,发现有一个特别棒的博客
+### 将内核模块直接整合到启动内核中
+这一种来自于 ``debug_cat`` 的 [编译Pixel3内核解决触摸声音WiFi异常](https://mp.weixin.qq.com/s?__biz=MzU1NjYyNjA3MQ==&mid=2247485043&idx=1&sn=f0c7f008d27851ee0d88780711eebb21&chksm=fbc37f8bccb4f69d666182c9a22b97dc7776c62fc67303bb08dcf75944e2637649aa2ee66028&mpshare=1&scene=23&srcid=0706c2VKK7bFY5X50Qc7aQEU&sharer_sharetime=1688653779744&sharer_shareid=f3dd87dafbf3fa6c2772d66af5f1c719#rd)
 
-来自``seeFlowerX``的:``https://blog.seeflower.dev/archives/174``。
+其原理是像``kernelsu``那样直接将 驱动模块 直接打包进内核中
 
-所以我采用 ``ramdisk`` 进行整合驱动内核模块
+![Alt text](image17.png)
+
+其``M``代表打包成内核模块,在运行时候进行加载和卸载,将``M``改成``*``号打包进内核中。
+
+由于文章写的很详细了,我就不重复叙述了,亲测是可行的,具体可以参考: [编译Pixel3内核解决触摸声音WiFi异常](https://mp.weixin.qq.com/s?__biz=MzU1NjYyNjA3MQ==&mid=2247485043&idx=1&sn=f0c7f008d27851ee0d88780711eebb21&chksm=fbc37f8bccb4f69d666182c9a22b97dc7776c62fc67303bb08dcf75944e2637649aa2ee66028&mpshare=1&scene=23&srcid=0706c2VKK7bFY5X50Qc7aQEU&sharer_sharetime=1688653779744&sharer_shareid=f3dd87dafbf3fa6c2772d66af5f1c719#rd)
+
+
+### ramdisk 整合
+
+
+这种来自另外一个大佬 ,``seeFlowerX``的:``https://blog.seeflower.dev/archives/174``,写的也非常详细。
+
+我对这种方式抽出了脚本,具体需要先了解一些知识:
 
 ### 了解供应商ramdisk模块加载位置
 
@@ -323,9 +337,9 @@ fastboot boot Image.lz4-dtb
 ``ramdisk`` 是啥？它在哪里？
 
 首先,关于``ramdisk``我并没有在 ``android sources``  中搜索到满意的描述,可能是属于``linux``内容？但是按照查找的资料来说 ``ramdisk`` 是种基于
-``内存的磁盘``,用于提供访问速度。 在 ``android``中将``ramdisk``做为 开机时候的启动项,里面包含了``init`` 作为用户进程第一个执行程序。
+``内存的磁盘``,用于提升固定的访问速度。 在 ``android``中将``ramdisk``做为 开机时候的启动项,里面包含了``init`` 作为用户进程第一个执行程序。
 
-ramdisk 接口可以看官方的描述:
+ramdisk 可以看官方的描述:
 ```
 https://source.android.com/docs/core/architecture/partitions/generic-boot?hl=zh-cn#boot-images-contents
 
@@ -339,9 +353,9 @@ first_stage_ramdisk/
 debug_ramdisk/ 、 mnt/ 、 dev/ 、 sys/ 、 proc/ 、 metadata/
 ```
 
-记住之前的一段话 ``（作为 boot.img 的 ramdisk 随 GKI 提供，应用在第一个 cpio 归档之上）包含 first_stage_init 及其依赖的库。``
+官方说了一段话 ``（作为 boot.img 的 ramdisk 随 GKI 提供，应用在第一个 cpio 归档之上）包含 first_stage_init 及其依赖的库。``,有点绕口,但是抓住核心问题
 
-那么``通用 ramdisk`` 应该是在 **boot.img** 中,使用 ``android image kitchen`` 解包后确实有这个文件:
+``通用 ramdisk`` 是在 **boot.img** 中,使用 ``android image kitchen`` 解包后确实有这个文件:
 
 ![Alt text](image08.png)
 

@@ -39,15 +39,16 @@ config KSU
 ```    
 
 这样确实 ``ok`` 了。但总感觉这样不是正确的解决办法。
-所以我通过查看 其他人的仓库修改
 
-![Alt text](image01.png)
-
-确认了几个修改位置。
+下面提供了解决方案
 
 ### 去掉 check_defconfig 
 
-我们看下 ``private/msm-google/build.config`` 文件
+这个参考了``debug_cat``的解决方案,亲测,确实方便有效！
+![Alt text](image01.png)
+
+
+首先我们看下 ``private/msm-google/build.config`` 文件
 ```
 KERNEL_DIR=private/msm-google
 . ${ROOT_DIR}/${KERNEL_DIR}/build.config.common.clang
@@ -131,7 +132,7 @@ CONFIG_KPROBE_EVENTS=y
 ![Alt text](image03.png)
 
 ### xxx_defconfig正确配置方式
-前面说的虽然也可以完成编译工作,但是我在浏览 ``saveconfig``的时候发现了个不错的文章:
+前面说的虽然也可以完成编译工作,但是我在浏览 ``defconfig``的时候发现了个不错的文章:
 [https://www.adtxl.com/index.php/archives/124.html](https://www.adtxl.com/index.php/archives/124.html)
 
 按照文章所指示,我们应该这样操作:
@@ -265,11 +266,7 @@ adb push Shamiko-v0.7.3-174-release.zip /sdcard/
 
 **kernelsu 的 root 未检查到,zygisk 也未检测到**
 
-但是因为现在的``aosp`` 采用的 ``userdebug`` 构建的,并且使用``adb remount``挂载了分区,所以还是被检测到了异常。但这些异常并不是
-``kernelsu``被检测到了。
-
-问了下``debug_cat``,说要解决的话我们得修改 ``aosp``的代码 或者换``pixel6``直接刷``kernelsu``一劳永逸。不然需要将构建的``userdebug``伪造成``user``,并且需要把指纹签名重弄一遍。
-我看了半天,再三思索,决定放弃,因为有点麻烦。
+但是因为现在的``aosp`` 采用的 ``userdebug`` 构建的,并且使用``adb remount``挂载了分区,所以被检测到了异常。
 
 所以下一节我打算直接采用 官方出厂镜像 覆盖``kernel启动镜像``重试一遍。
 
