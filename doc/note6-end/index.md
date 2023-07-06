@@ -1,5 +1,7 @@
 # android-pixel4a-刷机系列-(6)出厂镜像编译kernelsu内核
 
+O,我将这些教程发在了 [github](https://github.com/zhanghecn/luckzh_android_flash_notes) 上进行总和,欢迎``star``。
+
 使用 ``userdebug`` 构建的 ``aosp`` 很容易被检测。
 
 要想过检测需要修正一些系统指纹特征
@@ -718,6 +720,6 @@ ln -sf aosp/system/tools/mkbootimg tools/mkbootimg
 而对于本次来说,也就是``非gki``内核,我们需要将``boot ramdisk + vendor ramdisk``合并成``1``个,并将合并的``ramdisk``参与``mkbootimg``打包,生成的``boot.img``才是我们刷入的重点。
 
 
-O,我将这些教程发在了 [github](https://github.com/zhanghecn/luckzh_android_flash_notes) 上进行总和,欢迎``star``。
+
 
 
