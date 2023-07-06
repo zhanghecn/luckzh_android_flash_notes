@@ -268,7 +268,7 @@ adb push Shamiko-v0.7.3-174-release.zip /sdcard/
 但是因为现在的``aosp`` 采用的 ``userdebug`` 构建的,并且使用``adb remount``挂载了分区,所以还是被检测到了异常。但这些异常并不是
 ``kernelsu``被检测到了。
 
-问了下``debug_cat``,说要解决的话我们得修改 ``aosp``的代码 或者换``pixel6``一劳永逸,将构建的``userdebug``伪造成``user``,并且需要把指纹签名重弄一遍。
+问了下``debug_cat``,说要解决的话我们得修改 ``aosp``的代码 或者换``pixel6``直接刷``kernelsu``一劳永逸。不然需要将构建的``userdebug``伪造成``user``,并且需要把指纹签名重弄一遍。
 我看了半天,再三思索,决定放弃,因为有点麻烦。
 
 所以下一节我打算直接采用 官方出厂镜像 覆盖``kernel启动镜像``重试一遍。

@@ -17,3 +17,6 @@
 4. [android-pixel4a-刷机系列-(4)kernelsu整合内核](./doc/note4-kernelSu/index.md)
 5. [android-pixel4a-刷机系列-(5)kernelsu编译问题解决及使用](./doc/note5-kernelSu_question/index.md)
 6. [android-pixel4a-刷机系列-(6)出厂镜像编译kernelsu内核](./doc/note6-end/index.md)
+
+
+你也可以通过``52破解``进行查看 ``https://www.52pojie.cn/thread-1803079-1-1.html``。

@@ -2,11 +2,8 @@
 
 使用 ``userdebug`` 构建的 ``aosp`` 很容易被检测。
 
-``debug_cat``大佬 修改 ``aosp`` 
-[http://www.debuglive.cn/article/1076980560838000640](http://www.debuglive.cn/article/1076980560838000640)
-修改root 特征,并修正一些系统指纹特征
-
-(您需要将 ``user`` 构建配置 和 ``userdebug`` 配置进行比较,争取还原一致)
+要想过检测需要修正一些系统指纹特征
+(这需要对 ``user`` 构建配置 和 ``userdebug`` 配置进行比较,争取还原一致)
 
 这种考验技术功底,``user`` 构建配置 和 ``userdebug`` 差异比较多,只好放弃。
 
@@ -509,7 +506,7 @@ swiotlb=1 androidboot.boot_devices=soc/1d84000.ufshc cgroup_disable=pressure bui
 ![Alt text](image16.png)
 
 
-下面脚本有点长,但你只需要修改最上面的参数:
+下面脚本有点长,但你只需要修改上面提到的参数:
 ``` shell
 
 # $0 filename 
@@ -655,8 +652,55 @@ fi
 
 ```
 
-其中还要注意一点,我并没有指定``MKBOOTIMG_PATH`` 路径,因为它默认是 ``"tools/mkbootimg/mkbootimg.py"``
+其中还要注意一点,我并没有指定``MKBOOTIMG_PATH`` 路径,因为它默认是 ``"tools/mkbootimg/mkbootimg.py"``。
+所以我们得将对应的``mkbootimg``项目``linker``过来
+```
+#进入到android kernel 根目录
+cd android-kernel
+mkdir tools
+ln -sf aosp/system/tools/mkbootimg tools/mkbootimg
+```
 
-## 
+接下在根目录下可以直接运行``build/build_bootimg.sh``。注意,不要进入到``build``里在执行``./build_bootimg.sh``因为可能会找不到``"tools/mkbootimg``
 
-最终操作 ``fastboot flash boot boot.img``
+然后你会在``out/dist``下发现``boot.img``。
+
+关于合并的``ramdisk``文件叫``ramdisk.gz``,打开虽然只会显示``boot ramdisk``,但如果大小是之前的两倍,那么就应该是合并过``vendor ramdisk``的。
+
+### 刷入
+如果``fastboot boot boot.img``没问题,那么进行刷入 ``fastboot flash boot boot.img`` 
+
+如果您当前并没有编译``kernelsu``,请参考**第五章内容**
+
+## kernelsu 测试
+
+## 总结
+之前说了很多,其实本次章节才是正确操作。
+
+总结点如下:
+
+### 内核配置
+内核配置主要看``.config``,里面包含通用配置,以及特定架构部分的配置,需要覆盖的话需要实现``4``个步骤
+1. ``make ARCH=arm64 xxx_defconfig``获取对应架构的``.config``
+2. ``make ARCH=arm64 menuconfig`` 按照``.config``进一步配置,此时会打开配置界面
+3. ``make ARCH=arm64 saveconfig`` 根据``.config``生成``defconfig``
+4. ``mv|cp defconfig arch/xxxx/xxx_defconfig`` 覆盖架构配置
+
+
+### 内核模块
+
+供应商内核模块除了加载``vendor``分区中的``/vendor/lib/modules``位置外。
+
+其实还会通过``vendor ramdisk``中的``/lib/modules``进行加载,它会读取``/lib/modules/modules.load``配置文件,这是我们可以推送对应内核模块的关键所在。
+
+对于``gki``内核来说,一般是``boot.img``版本 ``3``以上的。
+
+其``vendor ramdisk``是单独存放在``vendor_boot``里面的,这种更容易自定义。
+
+
+而对于本次来说,也就是``非gki``内核,我们需要将``boot ramdisk + vendor ramdisk``合并成``1``个,并将合并的``ramdisk``参与``mkbootimg``打包,生成的``boot.img``才是我们刷入的重点。
+
+
+O,我将这些教程发在了 [github](https://github.com/zhanghecn/luckzh_android_flash_notes) 上进行总和,欢迎``star``。
+
+
