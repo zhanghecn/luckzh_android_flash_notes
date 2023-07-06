@@ -504,7 +504,7 @@ PAGE_SIZE
 
 
 在此使用脚本之前,需要做下准备工作,比如有几个参数需要您传递:
-```
+``` cpp
 export VENDOR_RAMDISK_BINARY=/home/zhangxuan/Desktop/android_image_kitchen/boot.img-ramdisk.gz
 export BUILD_BOOT_IMG=1
 export BASE_ADDRESS=0x00000000
@@ -524,11 +524,10 @@ swiotlb=1 androidboot.boot_devices=soc/1d84000.ufshc cgroup_disable=pressure bui
 ![Alt text](image16.png)
 
 
-由于脚本有点长,我将它单独放在了``github``上,请看这里
-[]
+由于脚本有点长,我将它单独放在了``github``上,请看这里:
+[https://github.com/zhanghecn/luckzh_android_flash_notes/blob/main/doc/note6-end/build_bootimg.sh](https://github.com/zhanghecn/luckzh_android_flash_notes/blob/main/doc/note6-end/build_bootimg.sh)
 
-但你只需要修改上面提到的参数:
-
+你只需要修改上面提到的参数即可。
 
 
 其中还要注意一点,我并没有指定``MKBOOTIMG_PATH`` 路径,因为它默认是 ``"tools/mkbootimg/mkbootimg.py"``。
