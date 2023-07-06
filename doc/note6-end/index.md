@@ -73,7 +73,8 @@ sh flash-all.sh
 
 原因:个人觉得跟 之前使用 ``userdebug``版本有关系。
 因为我设置了 ``adb remount`` 并覆盖了 ``vendor``分区中的模块,因为``remount``采用的``overlayfs``堆叠的方式。
-我查到了一些很不错的资料:[https://blog.csdn.net/guyongqiangx/article/details/128881282](https://blog.csdn.net/guyongqiangx/article/details/128881282)
+
+>关于``overlayfs``我查到了一些很不错的资料:[https://blog.csdn.net/guyongqiangx/article/details/128881282](https://blog.csdn.net/guyongqiangx/article/details/128881282)
 
 所以可能 ``overlayfs``挂载的 ``vendor``依旧未卸载？？？,导致``vendor``的模块不一致？？？
 
@@ -455,6 +456,7 @@ usage: mkbootimg [-h] [--kernel KERNEL] [--ramdisk RAMDISK] [--second SECOND]
 - .... 其余参数后续在说
 
 这里我发现了 ``vendor_boot`` 和 ``vendor_ramdisk``。所以对于 **gki** 内核来说,``vendor ramdisk``应该转移到了``vendor_boot``。
+
 而不是``boot ramdisk``中,当然我们并不是``gki内核``,所以我们需要将``boot通用ramdisk``和``vendor ramdisk``进行合并。
 
 理论上,我们填好参数,就能够编译携带 ``供应商内核模块`` 的``boot.img``。

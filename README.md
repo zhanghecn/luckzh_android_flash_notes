@@ -19,4 +19,8 @@
 6. [android-pixel4a-刷机系列-(6)出厂镜像编译kernelsu内核](./doc/note6-end/index.md)
 
 
-你也可以通过``52破解``进行查看 ``https://www.52pojie.cn/thread-1803079-1-1.html``。
+你也可以通过``52破解``上面找到我,具体请看我的文章 ``https://www.52pojie.cn/thread-1803079-1-1.html``。
+
+
+
+如果对您有帮助,欢迎任何方式的打赏。让我泡面里面加火腿
